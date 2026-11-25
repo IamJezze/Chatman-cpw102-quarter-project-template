@@ -1,0 +1,35 @@
+# tests/test_checkin.py
+import unittest
+from main import CUSTOM_QUESTIONS, evaluate_checkin, get_severity_band, prompt_rating
+
+
+class TestCheckinApp(unittest.TestCase):
+    def test_severity_boundaries(self):
+        self.assertEqual(get_severity_band(0), "Minimal")
+        self.assertEqual(get_severity_band(4), "Minimal")
+        self.assertEqual(get_severity_band(5), "Mild")
+        self.assertEqual(get_severity_band(9), "Mild")
+        self.assertEqual(get_severity_band(10), "Moderate")
+        self.assertEqual(get_severity_band(14), "Moderate")
+        self.assertEqual(get_severity_band(15), "Moderately Severe")
+        self.assertEqual(get_severity_band(19), "Moderately Severe")
+        self.assertEqual(get_severity_band(20), "Severe")
+        self.assertEqual(get_severity_band(27), "Severe")
+
+    def test_safety_flag_prepends_urgent_action(self):
+        scores = [0, 0, 0, 0, 0, 0, 0, 0, 1]
+        result = evaluate_checkin(CUSTOM_QUESTIONS, scores)
+        self.assertTrue(result["safety_triggered"])
+        self.assertIn("988", result["actions"][0])
+
+    def test_prompt_rating_retries_invalid_inputs(self):
+        inputs = iter(["abc", "-2", "4", "2"])
+        messages = []
+        q = CUSTOM_QUESTIONS[0]
+        val = prompt_rating(q, 1, 9, input_fn=lambda _: next(inputs), output_fn=messages.append)
+        self.assertEqual(val, 2)
+        self.assertEqual(len(messages), 3)
+
+
+if __name__ == "__main__":
+    unittest.main()
